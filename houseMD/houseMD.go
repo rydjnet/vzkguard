@@ -2,6 +2,7 @@ package housemd
 
 import (
 	"fmt"
+	"log"
 	"strings"
 )
 
@@ -28,9 +29,12 @@ func Guard(msg string) int {
 		"дохода":         3,
 		"доходом":        3,
 		"зapaбoтoк":      3,
-		"$":              3,
+		"заработок":      3,
+
+		"$": 3,
 	}
 	msg = strings.ReplaceAll(msg, ",", "")
+	msg = strings.ToLower(msg)
 	arrWords := strings.Fields(msg)
 	for _, val := range arrWords {
 		penalty := pWords[val]
@@ -38,4 +42,29 @@ func Guard(msg string) int {
 	}
 	fmt.Println("Penalty: ", penaltyScore)
 	return penaltyScore
+}
+
+// HouseMD - Анализ на спам.  true - пользователю можно верить, fasle вероятно это спам
+func HouseMD(tmsg TMessage, cache *CacheUsers) bool {
+	//Шаг первый проверяем доверие к пользователю
+	if cache.UserTrust(tmsg.User.Id) > 4 {
+		log.Printf("User: %s (login: %s), have msgCount:%d\n", tmsg.User.UserFirstName, tmsg.User.UserLogin, cache.UserTrust(tmsg.User.Id))
+		cache.NewMsg(tmsg.User)
+		return true
+	}
+	log.Printf("User: %s (login: %s), have msgCount:%d\n", tmsg.User.UserFirstName, tmsg.User.UserLogin, cache.UserTrust(tmsg.User.Id))
+	penaltyDicScore := 0
+	//Проверяем через словарь
+	penaltyDicScore += dicCheker(tmsg.Text)
+	//Проверяем фразы
+	penaltyPhasesScore := checkSpamPhrases(tmsg.Text)
+	if penaltyPhasesScore > 0 && penaltyDicScore > 0 {
+		return false
+	}
+	if penaltyDicScore > 2 {
+		return false
+	}
+	// Если криминал не обнаружен, увеличиваем число сообщений.
+	cache.NewMsg(tmsg.User)
+	return true
 }
