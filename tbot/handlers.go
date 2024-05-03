@@ -36,14 +36,20 @@ func newMsg(c tele.Context) error {
 		User: tuser,
 		Text: message.Text,
 	}
-	log.Printf("Group id: %d name: %s", message.Chat.ID, message.Chat.Title)
+	log.Printf("Group id: %d name: %s , UserName: %s, UserLogin: %s", message.Chat.ID, message.Chat.Title, tuser.UserFirstName, tuser.UserLogin)
+	chatUser, _ := bot.ChatMemberOf(message.Chat, message.Sender)
+	log.Println("Member can Manage Chat: ", chatUser.CanManageChat)
+	// Проверяем на админа
+	if chatUser.CanManageChat {
+		return nil
+	}
 	log.Printf("Start HouseMD")
 	if housemd.HouseMD(tmessage, userData) {
 		return nil
 	}
 	log.Println("HouseMD found spam message")
 
-	alert := "Вероятно обнаружен спаммер: " + message.Sender.FirstName + " " + message.Sender.Username
+	alert := "Вероятно обнаружен спамер: " + message.Sender.FirstName + " " + message.Sender.Username
 
 	r := &tele.ReplyMarkup{}
 	if message.Chat.ID == -1001137424763 {
