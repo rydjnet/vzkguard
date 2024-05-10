@@ -1,0 +1,12 @@
+  - chat_name: "Жизнь С СРК"
+    chat_id: -1001935268666
+    chat_link: https://t.me/lifeibs
+    mode: watcher
+  - chat_name: "Научно о ВЗК"
+    chat_id: -1001137424763
+    chat_link: https://t.me/nyak_bk_vzk
+    mode: moderator
+  - chat_name: "Тестовый чат"
+    chat_id: -1002036914981
+    chat_link: example2.com
+    mode: watcher
