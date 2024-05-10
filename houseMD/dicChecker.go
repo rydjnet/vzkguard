@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 var pWords = map[string]int{
@@ -39,11 +41,31 @@ var pWords = map[string]int{
 	"поддeржка":      1, // содржит латинские символы
 	"быстрoгo":       5, // содржит латинские символы
 	"зapaбoтoк":      5, // содржит латинские символы
-	"заработок":      3,
-	"фaльшивые":      1,
-	"Р2Р":            3,
-	"казино":         1,
-	"букмекерской":   1,
+	"идet":           5, // содржит латинские символы
+	"haбop":          5, // содржит латинские символы
+	"людeй":          5, // содржит латинские символы
+	"ha":             2, // содржит латинские символы
+	"hobый":          5, // содржит латинские символы
+	"пpoekt":         5, // содржит латинские символы
+	"гpафик":         5, // содржит латинские символы
+	"yдaлённo":       5, // содржит латинские символы
+	"любoй":          5, // содржит латинские символы
+	"мupa":           5, // содржит латинские символы
+	"тoчкu":          5, // содржит латинские символы
+	"быстpый":        5, // содржит латинские символы
+	"pocт":           5, // содржит латинские символы
+	"выcoкue":        5, // содржит латинские символы
+	"дoxoды":         5, // содржит латинские символы
+	"дeнь":           5, // содржит латинские символы
+	"подpобности":    5, // содржит латинские символы
+	"мeста":          5, // содржит латинские символы
+	"огpаничeны":     5, // содржит латинские символы
+
+	"заработок":    3,
+	"фaльшивые":    1,
+	"Р2Р":          3,
+	"казино":       1,
+	"букмекерской": 1,
 
 	"$":   1,
 	"18+": 1,
@@ -72,23 +94,61 @@ var whiteList = map[string]bool{
 	"срк":          true,
 	"диагноз":      true,
 	"диагноза":     true,
+	"ГИБП":         true,
+}
+
+func CheckLatinCharacters(input string) bool {
+	count := 0
+	for _, char := range input {
+		if unicode.Is(unicode.Latin, char) {
+			count++
+		}
+	}
+	if len(input)-count < 1 {
+		return false
+	}
+	return count > 1
 }
 
 func dicCheker(msg string) int {
 	var penaltyScore int
 
-	msg = strings.ReplaceAll(msg, ",", "")
-	msg = strings.ToLower(msg)
 	arrWords := strings.Fields(msg)
 	for _, val := range arrWords {
 		if whiteList[val] {
 			return 0
+		}
+		// Если первая буква в слове не ASCII то вероятно это слово на русском или другом языке, начинаем искать в нем латиницу.
+		if val[0] > unicode.MaxASCII {
+			if CheckLatinCharacters(val) {
+				penaltyScore++
+			}
 		}
 		penalty := pWords[val]
 		penaltyScore += penalty
 	}
 	fmt.Println("Penalty: ", penaltyScore)
 	return penaltyScore
+}
+
+// isSpamToUpper - ищет сообщения которые написаны с множественным переходом через строку и бОльшая часть символов написана в верхнем регистре.
+func IsSpamToUpper(msg string) bool {
+	count := strings.Count(msg, "\n\n")
+	if count > 2 {
+		msg = strings.ReplaceAll(msg, " ", "")
+		msg = strings.ReplaceAll(msg, "\n\n", "")
+		upperCounter := 0
+		for _, s := range msg {
+			if unicode.IsUpper(s) {
+				upperCounter++
+			}
+		}
+		percent := float64(upperCounter) / float64(utf8.RuneCountInString(msg)) * 100
+		if int(percent) > 60 {
+			return true
+		}
+	}
+	return false
 }
 
 func checkSpamPhrases(msg string) int {
@@ -134,15 +194,12 @@ func checkSpamPhrases(msg string) int {
 		"за деталями в лс",
 		"за подробностями  пишите мне в лс",
 		"в лс или на основу",
+		"в мире казино",
+		"cтавки на спорт",
 	}
-	msg = strings.ToLower(msg)
-	msg = strings.ReplaceAll(msg, ",", "")
-	msg = strings.ReplaceAll(msg, ".", "")
-	msg = strings.ReplaceAll(msg, "!", "")
-	cleanedText := strings.Join(strings.Fields(msg), " ") //убираем лишние пробелы
 	penaltyScore := 0
 	for _, phrase := range dicPhrases {
-		if strings.Contains(cleanedText, phrase) {
+		if strings.Contains(msg, phrase) {
 			log.Printf("Found phrase: %s\n", phrase)
 			penaltyScore++
 		}
