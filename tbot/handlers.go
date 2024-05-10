@@ -61,7 +61,7 @@ func AntiSpam(m *tele.Message) {
 	if chatUser.CanManageChat {
 		return
 	}
-	if config.TUserCache.GetUser(m.Sender.ID) {
+	if config.TUserCache.GetUser(m.Sender.ID) && m.Chat.ID != logChat.ID {
 		return
 	}
 	var isSpam bool
@@ -78,7 +78,7 @@ func AntiSpam(m *tele.Message) {
 
 func Perspective(m *tele.Message) {
 	toxicScore := getToxicScore(m)
-	if toxicScore > float64(0.4) {
+	if toxicScore > float64(0.6) {
 		chatParams := config.ChatsCfg[m.Chat.ID]
 		r := &tele.ReplyMarkup{}
 		url := fmt.Sprintf("%s/%d", chatParams.Link, m.ID)
