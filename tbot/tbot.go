@@ -5,13 +5,11 @@ import (
 	"os"
 	"time"
 	"vzkguard/config"
-	housemd "vzkguard/houseMD"
 
 	tele "gopkg.in/telebot.v3"
 )
 
 var bot *tele.Bot
-var userData *housemd.CacheUsers
 
 func Start() {
 	var err error
@@ -27,10 +25,8 @@ func Start() {
 		log.Fatal(err)
 		return
 	}
-	log.Println("init user cache")
-	userData = housemd.New()
 	bot.Handle(tele.OnText, msgHandler)
-	bot.Handle(tele.OnPhoto, newMsg)
+	bot.Handle(tele.OnPhoto, msgHandler)
 	log.Println("Bot started")
 	log.Println("----------------------")
 	bot.Start()

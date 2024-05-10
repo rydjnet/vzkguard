@@ -6,7 +6,6 @@ import (
 	"unicode/utf8"
 	"vzkguard/antispam"
 	"vzkguard/config"
-	housemd "vzkguard/houseMD"
 	"vzkguard/perspective"
 
 	tele "gopkg.in/telebot.v3"
@@ -15,107 +14,6 @@ import (
 // Создаем объект чата
 var logChat = &tele.Chat{
 	ID: int64(-1002036914981),
-}
-
-func bReport(c tele.Context) error {
-	callback := c.Callback()
-	fmt.Printf("Callback received: Unique: %s, Data: %s\n", callback.Unique, callback.Data)
-
-	if callback.Unique == "report_spam" {
-		fmt.Println("Handling report spam")
-		// Ваша логика удаления сообщения и т.д.
-
-	}
-
-	// Важно вызвать c.Respond() для отправки уведомления об обработке колбэка
-	c.Respond()
-	return nil
-}
-func preInit(c tele.Context) (*housemd.TUser, *housemd.TMessage) {
-	log.Println("Starting preCheck")
-	var tmsg housemd.TMessage
-	if c.Message().Text == "" {
-		tmsg.Text = c.Message().Caption
-	} else {
-		tmsg.Text = c.Message().Text
-	}
-	tuser := housemd.TUser{
-		Id:            c.Message().Sender.ID,
-		UserLogin:     c.Message().Sender.Username,
-		UserFirstName: c.Message().Sender.FirstName,
-	}
-	tmsg.User = tuser
-	tmsg.ID = c.Message().ID
-	return &tuser, &tmsg
-}
-func newMsg(c tele.Context) error {
-	log.Println("A new message received")
-	tuser, tmessage := preInit(c)
-	if tmessage.Text == "" {
-		return nil
-	}
-	message := c.Message()
-	log.Printf("Group id: %d name: %s , UserName: %s, UserLogin: %s", message.Chat.ID, message.Chat.Title, tuser.UserFirstName, tuser.UserLogin)
-	chatUser, _ := bot.ChatMemberOf(message.Chat, message.Sender)
-	if housemd.Gentleman(tmessage) > float64(0.4) {
-		chatID := int64(-1002036914981) // Тестовый чат
-		// Создаем объект чата
-		chat := &tele.Chat{
-			ID: chatID,
-		}
-		alert := "Сообщение пользователя может быть воспринято как оскорбление, пожалкйста проверьте " + message.Sender.FirstName + " " + message.Sender.Username
-		bot.Send(chat, alert)
-		bot.Forward(chat, message)
-	}
-	// сообщение больше 1000 симвлов не проверяем
-	if utf8.RuneCountInString(message.Text) > 500 {
-		return nil
-	}
-	log.Println("Member can Manage Chat: ", chatUser.CanManageChat)
-	// Проверяем на админа
-
-	if chatUser.CanManageChat {
-		return nil
-	}
-	chatParams, ok := config.ChatsCfg[message.Chat.ID]
-	if !ok {
-		return nil
-	}
-
-	log.Printf("Start HouseMD")
-	if housemd.HouseMD(tmessage, userData) {
-		return nil
-	}
-	log.Println("HouseMD found spam message ", chatParams.BotMod == config.ModeWatcher)
-
-	r := &tele.ReplyMarkup{}
-	switch chatParams.BotMod {
-	case config.ModeModer:
-		chatID := int64(-1002036914981) // Тестовый чат
-		// Создаем объект чата
-		chat := &tele.Chat{
-			ID: chatID,
-		}
-		alert := "Блокирую спам Пользователь: " + message.Sender.FirstName + " " + message.Sender.Username
-		bot.Send(chat, alert)
-		bot.Forward(chat, message)
-		bot.Delete(message)
-		bot.Ban(message.Chat, chatUser)
-
-	case config.ModeWatcher:
-		chatID := int64(-1002036914981) // Тестовый чат
-		// Создаем объект чата
-		chat := &tele.Chat{
-			ID: chatID,
-		}
-		url := fmt.Sprintf("%s/%d", chatParams.Link, message.ID)
-		btnReport := r.URL("Проверить", url)
-		r.Inline(r.Row(btnReport))
-		alert := "Вероятно обнаружен спамер: " + message.Sender.FirstName + " " + message.Sender.Username
-		bot.Send(chat, alert, r)
-	}
-
-	return nil
 }
 
 func msgHandler(m tele.Context) error {
