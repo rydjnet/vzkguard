@@ -3,78 +3,99 @@ package tbot
 import (
 	"fmt"
 	"log"
-	housemd "vzkguard/houseMD"
+	"unicode/utf8"
+	"vzkguard/antispam"
+	"vzkguard/config"
+	"vzkguard/perspective"
 
 	tele "gopkg.in/telebot.v3"
 )
 
-func bReport(c tele.Context) error {
-	callback := c.Callback()
-	fmt.Printf("Callback received: Unique: %s, Data: %s\n", callback.Unique, callback.Data)
-
-	if callback.Unique == "report_spam" {
-		fmt.Println("Handling report spam")
-		// Ваша логика удаления сообщения и т.д.
-
-	}
-
-	// Важно вызвать c.Respond() для отправки уведомления об обработке колбэка
-	c.Respond()
-	return nil
+// Создаем объект чата
+var logChat = &tele.Chat{
+	ID: int64(-1002036914981),
 }
 
-func newMsg(c tele.Context) error {
-	log.Println("A new message received")
-	message := c.Message()
-	tuser := housemd.TUser{
-		Id:            message.Sender.ID,
-		UserLogin:     message.Sender.Username,
-		UserFirstName: message.Sender.FirstName,
-	}
-	tmessage := housemd.TMessage{
-		ID:   message.ID,
-		User: tuser,
-		Text: message.Text,
-	}
-	log.Printf("Group id: %d name: %s , UserName: %s, UserLogin: %s", message.Chat.ID, message.Chat.Title, tuser.UserFirstName, tuser.UserLogin)
-	chatUser, _ := bot.ChatMemberOf(message.Chat, message.Sender)
-	log.Println("Member can Manage Chat: ", chatUser.CanManageChat)
-	// Проверяем на админа
-	if chatUser.CanManageChat {
+func msgHandler(m tele.Context) error {
+	tmsg := m.Message()
+	log.Printf("Group id: %d name: %s , UserName: %s, UserLogin: %s", tmsg.Chat.ID, tmsg.Chat.Title, tmsg.Sender.FirstName, tmsg.Sender.Username)
+	_, ok := config.ChatsCfg[tmsg.Chat.ID]
+	if !ok {
 		return nil
 	}
-	log.Printf("Start HouseMD")
-	if housemd.HouseMD(tmessage, userData) {
+	if tmsg.Text == "" && tmsg.Caption == "" {
 		return nil
 	}
-	log.Println("HouseMD found spam message")
+	if len(tmsg.Text) < 19000 || len(tmsg.Caption) < 19000 {
+		Perspective(tmsg)
+	}
 
-	alert := "Вероятно обнаружен спамер: " + message.Sender.FirstName + " " + message.Sender.Username
-
+	if utf8.RuneCountInString(tmsg.Text) < 500 || utf8.RuneCountInString(tmsg.Caption) < 500 {
+		AntiSpam(tmsg)
+	}
+	return nil
+}
+func spam(m *tele.Message) {
+	chatParams := config.ChatsCfg[m.Chat.ID]
+	chatUser, _ := bot.ChatMemberOf(m.Chat, m.Sender)
 	r := &tele.ReplyMarkup{}
-	if message.Chat.ID == -1001137424763 {
-		url := fmt.Sprintf("https://t.me/nyak_bk_vzk/%d", message.ID)
+	switch chatParams.BotMod {
+	case config.ModeModer:
+		alert := "Блокирую спам Пользователь: " + m.Sender.FirstName + " " + m.Sender.Username
+		bot.Send(logChat, alert)
+		bot.Forward(logChat, m)
+		bot.Delete(m)
+		bot.Ban(m.Chat, chatUser)
+
+	case config.ModeWatcher:
+		url := fmt.Sprintf("%s/%d", chatParams.Link, m.ID)
 		btnReport := r.URL("Проверить", url)
 		r.Inline(r.Row(btnReport))
-		admChatID := int64(-1001178620090)
-		// Создаем объект чата
-		chat := &tele.Chat{
-			ID: admChatID,
-		}
-		bot.Send(chat, alert, r)
+		alert := "Вероятно обнаружен спамер: " + m.Sender.FirstName + " " + m.Sender.Username
+		bot.Send(logChat, alert, r)
+	}
 
+}
+func AntiSpam(m *tele.Message) {
+	chatUser, _ := bot.ChatMemberOf(m.Chat, m.Sender)
+	if chatUser.CanManageChat {
+		return
+	}
+	if config.TUserCache.GetUser(m.Sender.ID) && m.Chat.ID != logChat.ID {
+		return
+	}
+	var isSpam bool
+	if m.Text != "" {
+		isSpam = antispam.SpamDetecter(m.Text)
 	} else {
-		btnFalseReport := r.Data("Бан", "ban")
-		r.Inline(r.Row(btnFalseReport))
-		bot.Handle(&btnFalseReport, bReport)
+		isSpam = antispam.SpamDetecter(m.Caption)
 	}
-	chatID := int64(-4111795968) // Тестовый чат
-
-	// Создаем объект чата
-	chat := &tele.Chat{
-		ID: chatID,
+	if isSpam {
+		spam(m)
 	}
-	bot.Send(chat, alert, r)
+	config.TUserCache.NewMsg(m.Sender.ID)
+}
 
-	return nil
+func Perspective(m *tele.Message) {
+	toxicScore := getToxicScore(m)
+	if toxicScore > float64(0.6) {
+		chatParams := config.ChatsCfg[m.Chat.ID]
+		r := &tele.ReplyMarkup{}
+		url := fmt.Sprintf("%s/%d", chatParams.Link, m.ID)
+		btnReport := r.URL("Проверить", url)
+		r.Inline(r.Row(btnReport))
+		alert := fmt.Sprintf("Сообщение пользователя %s оценивается в %.2f токсичности", m.Sender.FirstName, toxicScore)
+		bot.Send(logChat, alert, r)
+		bot.Forward(logChat, m)
+	}
+}
+
+func getToxicScore(m *tele.Message) float64 {
+	var toxicScore float64
+	if m.Text != "" {
+		toxicScore = perspective.ToxicCheker(m.Text)
+	} else {
+		toxicScore = perspective.ToxicCheker(m.Caption)
+	}
+	return toxicScore
 }
