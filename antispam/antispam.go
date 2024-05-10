@@ -67,6 +67,13 @@ func checkerLatinWords(arrWords []string) int {
 	log.Println("latin words: ", penaltyScore)
 	return penaltyScore
 }
+func checkerTelegramFolders(msg string) bool {
+	count := strings.Count(msg, "https://t.me/addlist")
+	if count > 3 {
+		return true
+	}
+	return false
+}
 
 func checkerException(arrWords []string) bool {
 	for _, word := range arrWords {
@@ -90,6 +97,10 @@ func checkerSpamPhrases(msg *string) int {
 func SpamDetecter(msg string) bool {
 	if checkerToUpper(msg) {
 		log.Println("Spam detected ToUpper>60%")
+		return true
+	}
+	if checkerTelegramFolders(msg) {
+		log.Println("Spam detected t folders")
 		return true
 	}
 	msg = strings.ToLower(msg)
