@@ -69,10 +69,7 @@ func checkerLatinWords(arrWords []string) int {
 }
 func checkerTelegramFolders(msg string) bool {
 	count := strings.Count(msg, "https://t.me/addlist")
-	if count > 3 {
-		return true
-	}
-	return false
+	return count > 3
 }
 
 func checkerException(arrWords []string) bool {
@@ -118,8 +115,8 @@ func SpamDetecter(msg string) bool {
 		return true
 	}
 	trigWords := checkerWords(arrMsg)
-	if trigWords > 3 {
-		log.Println("Spam detected trig Words>3")
+	if trigWords > 2 {
+		log.Println("Spam detected trig Words>2")
 		return true
 	}
 	trigPhrases := checkerSpamPhrases(&msg)
