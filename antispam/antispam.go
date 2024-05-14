@@ -53,6 +53,17 @@ func checkerWords(arrWords []string) int {
 	return penaltyScore
 }
 
+func checkErarn(msg *string) bool {
+	if strings.Contains(*msg, "$") {
+		for _, word := range triggerEarns {
+			if strings.Contains(*msg, word) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // checkerWords - Функция считает сколько слов содержат латинские буквы, при условии что первый символ не относится к ASCII.
 func checkerLatinWords(arrWords []string) int {
 	var penaltyScore int
@@ -94,6 +105,10 @@ func checkerSpamPhrases(msg *string) int {
 func SpamDetecter(msg string) bool {
 	if checkerToUpper(msg) {
 		log.Println("Spam detected ToUpper>60%")
+		return true
+	}
+	if checkErarn(&msg) {
+		log.Println("Spam Detected $ plus earn word")
 		return true
 	}
 	if checkerTelegramFolders(msg) {

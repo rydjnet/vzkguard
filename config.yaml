@@ -6,6 +6,11 @@
     chat_id: -1001137424763
     chat_link: https://t.me/nyak_bk_vzk
     mode: moderator
+    
+  - chat_name: "Краснодарский чат ВЗК"
+    chat_id: -1001189197576
+    chat_link: https://t.me/vzkkrd
+    mode: moderator
   - chat_name: "Тестовый чат"
     chat_id: -1002036914981
     chat_link: example2.com

@@ -33,5 +33,7 @@ func (c *CacheUsers) NewMsg(userID int64) error {
 
 }
 func (c *CacheUsers) GetUser(userID int64) bool {
+	c.Mu.Lock()
+	defer c.Mu.Unlock()
 	return c.Data[userID]
 }
