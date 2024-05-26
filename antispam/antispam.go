@@ -63,6 +63,13 @@ func checkErarn(msg *string) bool {
 	}
 	return false
 }
+func checkerSpecialSymb(msg *string) bool {
+	countS := strings.Count(*msg, "@")
+	if countS > 2 {
+		return true
+	}
+	return false
+}
 
 // checkerWords - Функция считает сколько слов содержат латинские буквы, при условии что первый символ не относится к ASCII.
 func checkerLatinWords(arrWords []string) int {
@@ -73,6 +80,9 @@ func checkerLatinWords(arrWords []string) int {
 			if checkerLatinCharacters(val) {
 				penaltyScore++
 			}
+			penaltyScore += strings.Count(val, "0")
+			penaltyScore += strings.Count(val, "α")
+			penaltyScore += strings.Count(val, "ρ")
 		}
 	}
 	log.Println("latin words: ", penaltyScore)
@@ -137,6 +147,10 @@ func SpamDetecter(msg string) bool {
 	trigPhrases := checkerSpamPhrases(&msg)
 	if trigPhrases > 0 && trigWords > 0 {
 		log.Println("Spam detected trig phrases and trig words>0")
+		return true
+	}
+	if checkerSpecialSymb(&msg) {
+		log.Println("Spam detected special symbol @>2")
 		return true
 	}
 
