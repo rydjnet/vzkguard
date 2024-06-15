@@ -44,7 +44,6 @@ func checkerToUpper(msg string) bool {
 // checkerWords - Считает сколько слов триггеров найдено в сообщении
 func checkerWords(arrWords []string) int {
 	var penaltyScore int
-
 	for _, val := range arrWords {
 		penalty := triggerWords[val]
 		penaltyScore += penalty
@@ -135,7 +134,7 @@ func SpamDetecter(msg string) bool {
 		return false
 	}
 	trigLatinWords := checkerLatinWords(arrMsg)
-	if trigLatinWords > 3 {
+	if trigLatinWords > 2 {
 		log.Println("Spam detected Words with latin symb>3")
 		return true
 	}
