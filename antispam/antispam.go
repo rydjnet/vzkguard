@@ -82,6 +82,8 @@ func checkerLatinWords(arrWords []string) int {
 			penaltyScore += strings.Count(val, "0")
 			penaltyScore += strings.Count(val, "α")
 			penaltyScore += strings.Count(val, "ρ")
+			penaltyScore += strings.Count(val, "κ")
+			penaltyScore += strings.Count(val, "ο")
 		}
 	}
 	log.Println("latin words: ", penaltyScore)
